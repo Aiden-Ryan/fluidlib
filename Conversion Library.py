@@ -8,13 +8,6 @@ np.set_printoptions(precision=4)
 g = 9.81 #m/s^2_
 g_EE = 32.2 #ft/s^2
 
-cp  = 1 # Place holder
-cv = 2
-
-
-fluid = 'AIR'
-hIn = 'TP'
-hOut = 'D'
 
 # Getters
 def getR(fluid):
