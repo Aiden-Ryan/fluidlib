@@ -3,18 +3,17 @@ import CoolProp.CoolProp as CP
 from ctREFPROP.ctREFPROP import REFPROPFunctionLibrary
 import math as m
 import os
-np.set_printoptions(precision=4)
 
 g = 9.81 #m/s^2_
 g_EE = 32.2 #ft/s^2
 
 
 # Getters
-def getR(fluid):
-    M = CP.PropsSI('M', fluid)
+def getR():
+    fluid = input("input desired fluid: ")
+    M = CP.PropsSI("M", fluid)
     R = 8.314/M
     return R
-
 
 def getFluidProperty(hFLd, hIn, hOut, val1, val2): # hIn~"P1P2"; hOut~"P3"
     try:
@@ -31,45 +30,54 @@ def getFluidProperty(hFLd, hIn, hOut, val1, val2): # hIn~"P1P2"; hOut~"P3"
 
 
 # Cv Conversions 
-def Cv2Do(Cv):
+def Cv2Do():
+    Cv = float(input("input Cv: "))
     Do = 0.236*m.sqrt(Cv)
     return Do
 
-def Cv2F(Cv): 
+def Cv2F(): 
+    Cv = float(input("input Cv: "))
     F = 0.556*Cv
     return F
 
-def Cv2CdA(Cv):
+def Cv2CdA():
+    Cv = float(input("input Cv: "))
     Do = Cv2Do(Cv)
     CdA = 0.6*m.pi*Do**2/4
     return CdA
 
 #Do conversions
-def Do2Cv(Do):
+def Do2Cv():
+    Do = float(input("input Do: "))
     Cv = (Do/.236)**2 #power function
     return Cv
 
-def Do2CdA(Do, Cv):
+def Do2CdA():
+    Do = float(input("input Do: "))
+    Cv = float(input("input Cv: "))
     Cv = Do2Cv(Do)
     CdA = Cv2CdA(Cv)
     return CdA
 
-def Do2F(Do):
+def Do2F():
+    Do = float(input("input Do: "))
     F = 10.01*Do**2
     return F
 
 
 #Flow Factor Conversions
-def F2Do(F): 
+def F2Do(): 
+    F = float(input("input F: "))
     Do = 0.316*m.sqrt(F)
     return Do
 
-def F2Cv(F): 
-    Cv = 1.8*F
-    return Cv
-
-
-#Equivalent Orifice Diameter
+def F2Cv(): 
+    F = float(input("input F: "))
+    Cv = 1.8*F 
+    return Cv 
+ 
+ 
+#Equivalent Orifice Diameter 
 def Do(Q, w, dP):
     Do = 1.445*m.sqrt(Q)*pow(w,0.25)/pow(dP,0.25)
     return Do
@@ -161,6 +169,31 @@ def F2C(F):
     C = (F-32)/1.8
     return C
 
+def unknown_function():
+    print("Unknown function. Please try again.")
+
+# Dictionary
+functions = {
+    'getR': getR,
+    'Cv2Do': Cv2Do, 
+    'Cv2F': Cv2F, 
+    'Cv2CdA': Cv2CdA, 
+    'Do2Cv':Do2Cv,
+    'Do2CdA':Do2CdA,
+    'Do2F':Do2F,
+    'F2Do':F2Do,
+    'F2Cv':F2Cv,
+
+
+}
+
+while True:
+    user_input = input("Enter function name or exit: ").strip()
+    if user_input == "exit":
+        break
+    result = functions.get(user_input, unknown_function)()
+    if result is not None:
+        print("Result:", result)
 
 #Test Cases
 # Cv = .6
