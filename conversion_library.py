@@ -98,7 +98,7 @@ def F2Do(F):
     Returns ESOD for a provided flow factor
 
     '''
-    return 0.316*m.sqrt(F)
+    return 0.316*F**.5
 
 
 def F2Cv(F): 
