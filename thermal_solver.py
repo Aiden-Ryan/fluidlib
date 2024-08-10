@@ -4,11 +4,11 @@ ignore radiation
 constant heat transfer coefficient
 
 '''
-
+import numpy as np
    
 
 class node:
-    def __init__(n, T, rho, V, c, q=0, E_g=0):
+    def __init__(n, T, rho=0, V=0, c=0, q=0, E_g=0):
         n.rho = rho
         n.T = T
         n.V = V
@@ -34,13 +34,16 @@ class path:
     def getArgs(p): 
         return [p.Tinf, p.h, p.A1, p.A2, p.e, p.k, p.L]
         
+def ODE(t, T, Tinf, h, A1, A2,e,k,L,rho, V,c,q,E_g, i=1): 
+    i = i+1
+    b = 1
+    return -A1*k*((T-i)/L)
 
-def ODE(t, T, Tinf, h, A1, A2, e, k ,L, rho, V, c, q, E_g):
 
-    return q*A1 + E_g - (h*A1)/(rho*V*c)*(T - Tinf)
 
-# def ODE(t, T, path.getArgs()):
-#     return T.q*T.A + T.E_g - (path.h*T.A)/(T.rho*T.V*T.c)*(T.T- path.Tinf)
+# def ODE(t, T, Tinf, h, A1, A2, e, k ,L, rho, V, c, q, E_g):
+    # return q*A1 + E_g - (h*A1)/(rho*V*c)*(T - Tinf)
+
 
 
     

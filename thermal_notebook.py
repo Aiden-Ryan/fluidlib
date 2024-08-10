@@ -11,15 +11,16 @@ from mpl_toolkits import mplot3d
 
 
 # %%
-T = ts.node(198, 8000, .05, 500)
-T2 = ts.node(400, 8000, .05, 500)
-p = ts.path(1, h=15)
+T = ts.node(198)
+T2 = ts.node(400)
+p = ts.path(1, h=2,L=2,k=3)
 args = p.getArgs() + T.getArgs()
 T_array = [T.getT(), T2.getT()]
-T_array = [195, 400]
-t = [1, 10000]
+T_array = [165,400]
+t = [1,2]
 T = solve_ivp(ts.ODE, t, T_array, args=args)
 print(T.y)
+plt.plot(T.t, T.y[0,:])
 plt.plot(T.t, T.y[1,:])
 
 
