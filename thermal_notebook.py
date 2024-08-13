@@ -10,23 +10,27 @@ import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
 
 
+
 # %%
-T = ts.node(198)
-T2 = ts.node(400)
-p = ts.path(1, h=2,L=2,k=3)
-args = p.getArgs() + T.getArgs()
-T_array = [T.getT(), T2.getT()]
-T_array = [165,400]
-t = [1,2]
-T = solve_ivp(ts.ODE, t, T_array, args=args)
-print(T.y)
-plt.plot(T.t, T.y[0,:])
-plt.plot(T.t, T.y[1,:])
-
-
-
-
-
+'''
+Stability Criterion: Fo*(1 + Bi) <= .5
+Bi = h*dx/k
+Fo = alpha*t/dx**2
+'''
+n = 2
+t = 400
+step = 1
+dt = int(t/step)
+T = np.zeros(shape=(n,dt))
+T[:,0] = np.random.random_integers(90,700, n)
+Tinf = 298
+dx = 10
+h = 50
+k = 50
+print(ts.ThermalSolve(h, dx, k, 0.001, dt, T, Tinf))
+t = np.linspace(0,t,dt)
+for i in range(len(T[:,0])):
+    plt.plot(t, T[i, :])
 
 
 # %%

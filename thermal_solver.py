@@ -34,15 +34,28 @@ class path:
     def getArgs(p): 
         return [p.Tinf, p.h, p.A1, p.A2, p.e, p.k, p.L]
         
-def ODE(t, T, Tinf, h, A1, A2,e,k,L,rho, V,c,q,E_g, i=1): 
-    i = i+1
-    b = 1
-    return -A1*k*((T-i)/L)
+
+def ThermalSolve(h,dx,k,alpha,t,T,Tinf=298):
+
+    Bi = h*dx/k
+    Fo = alpha*t/dx**2
+    if Fo*(1 + Bi) > .5: 
+          print(Fo*(1 + Bi)) 
+          return("Does not meet stability criterion") 
+
+    jsize = len(T[:,0]-1)
+    for i in range(t-1):
+        for j in range(jsize):
+            if j == 0: 
+                T[j,i+1] = 2*Fo*(T[j+1, i] + Bi*Tinf) + (1-2*Fo - 2*Bi*Fo)*T[j,i]
+            elif j == (jsize-1):
+                T[j,i+1] = 2*Fo*(T[j-1, i] + Bi*Tinf) + (1-2*Fo - 2*Bi*Fo)*T[j,i]
+            else:
+                T[j, i+1] = Fo*(T[j+1, i] + T[j-1, i]) + (1-2*Fo)*T[j,i]
+            
+    return T
 
 
-
-# def ODE(t, T, Tinf, h, A1, A2, e, k ,L, rho, V, c, q, E_g):
-    # return q*A1 + E_g - (h*A1)/(rho*V*c)*(T - Tinf)
 
 
 
