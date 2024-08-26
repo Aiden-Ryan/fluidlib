@@ -1,10 +1,8 @@
 # %%
 import sys
-sys.path.append('/Users/125715/python')
 import math as m
 import numpy as np
-
-from fluidlib import thermal_solver as ts
+import thermal_solver as ts
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
@@ -16,7 +14,6 @@ T2 = ts.node(400, 8000, .05, 500)
 p = ts.path(1, h=15)
 args = p.getArgs() + T.getArgs()
 T_array = [T.getT(), T2.getT()]
-T_array = [195, 400]
 t = [1, 10000]
 T = solve_ivp(ts.ODE, t, T_array, args=args)
 print(T.y)
