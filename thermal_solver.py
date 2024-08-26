@@ -11,6 +11,7 @@ from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 
 
+
 class Node:
     '''
     Creates Temperature node with HT attributes
@@ -243,13 +244,3 @@ def ThermalSolve():
             y = input("Would you like to change your time window? Y/N: ")
 
 ThermalSolve()
-
-
-
-
-
-
-    
-
-
-    
