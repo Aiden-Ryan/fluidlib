@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 import CoolProp.CoolProp as CP
 from ctREFPROP.ctREFPROP import REFPROPFunctionLibrary
@@ -278,4 +280,9 @@ def pa2psi(pa):
     '''
     return pa/6894.76
 
+def cmm2cin(cmm):
+    '''
+    Cubic millimeters to Cubic inches
+    '''
+    return cmm/16387.064
 
