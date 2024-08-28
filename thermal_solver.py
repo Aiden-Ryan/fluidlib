@@ -7,6 +7,7 @@ ignore radiation
 import numpy as np
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
+# import prop_lib as p
 
 
 
@@ -15,23 +16,27 @@ class Node:
     Creates Temperature node with HT attributes
     '''
     def __init__(self, T, kcond, Ac=0, Ar = 0,rho = 803, V=.01, c=1, q=0, Eg=0, h=0,Tinf=298,Tsurr=298,e = 0, mat='N/A'):
+
         if (h*V/(Ac*kcond) > 0.1 ):
-            print("Biot Number is greater than 0.1, does not satisfy Lumped Capacitance Criterion.")
-            return True
-        #316 is default material
-        self.rho = rho #kg/m3 
-        self.V = V #m3
-        self.T = T #K 
-        self.c = c #J/kgK
-        self.q = q #W
-        self.Eg = Eg #W
-        self.h = h #W/m^2K
-        self.Tinf = Tinf #K
-        self.Tsurr = Tsurr #K
-        self.e = e # dimensionless, emissivity of body
-        self.Ac = Ac #Convection Area
-        self.Ar = Ar #Radiation Area
-        self.mat = mat
+            raise Exception("Biot Number is greater than 0.1, does not satisfy Lumped Capacitance Criterion.")
+        
+        else:
+            #316 is default material
+            # self.rho = p.SS316.density #kg/m3 
+            self.rho = rho #kg/m3 
+            self.V = V #m3
+            self.T = T #K 
+            self.c = c #J/kgK
+            self.q = q #W
+            self.Eg = Eg #W
+            self.h = h #W/m^2K
+            self.Tinf = Tinf #K
+            self.Tsurr = Tsurr #K
+            self.e = e # dimensionless, emissivity of body
+            self.Ac = Ac #Convection Area
+            self.Ar = Ar #Radiation Area
+            self.mat = mat
+            self.kcond = kcond
     def get_args(self):
         return [self.rho, self.c, self.q, self.Eg, self.h, self.Tinf, self.Tsurr, self.e,self.Ac,self.Ar,self.V]
     
@@ -63,7 +68,8 @@ def TMatrix(nodes):
     array10 = np.array([node.Ac for node in nodes],dtype= float)
     array11 = np.array([node.Ar for node in nodes],dtype= float)
     array12 = np.array([node.V for node in nodes],dtype= float)
-    return np.vstack((array1, array2, array3, array4, array5,array6, array7, array8, array9,array10,array11, array12))
+    array13 = np.array([node.kcond for node in nodes], dtype=float)
+    return np.vstack((array1, array2, array3, array4, array5,array6, array7, array8, array9,array10,array11, array12,array13))
 
 def pMatrix(paths, n):
     '''
@@ -94,6 +100,7 @@ def T_vs_t(t_span, t_eval, nodeMatrix, pathMatrix):
     Ac = nodeMatrix[9,:]
     Ar = nodeMatrix[10,:]
     V = nodeMatrix[11,:]
+    kcond = nodeMatrix[12,:]
 
     if isinstance(pathMatrix, list) == True:
         '''
@@ -109,6 +116,7 @@ def T_vs_t(t_span, t_eval, nodeMatrix, pathMatrix):
         A = pathMatrix[0,:]
         k = pathMatrix[1,:]
         dx = pathMatrix[2,:]
+   # Fo = kcond*t_eval[1]/(rho*c*dx**2)
 
     dTdt = np.zeros(n,dtype=float)
     def func(t, T_array,rho,c,q,Eg,Tinf,h,e,A,k,dx,Ac,Ar,V):
@@ -140,7 +148,7 @@ def T_vs_t(t_span, t_eval, nodeMatrix, pathMatrix):
 
 def ThermalSolve():
     print("--------------------------\n1-D TRANSIENT THERMAL SOLVER\nBy: Aiden Ryan\nDescription: \nSolver uses lumped capacitance model and scipy's solve_ivp package to output a Temperature vs Time Plot \nof N number of thermal nodes. \n---\nREQUIRED PACKAGES: \n-numpy\n-scipy\n-matplotlib ")
-    print("---\nOTHER REQUIREMENTS: \nEnsure Biot Number for each node is < 0.1 AND Fourier Number is <= 0.5 \nBi = h*L_c/k \nFo = k*dt/(rho*cp*dx**2)\n" )
+    print("---\nOTHER REQUIREMENTS: \nEnsure Biot Number for each node is < 0.1 \nBi = h*L_c/k \n")
     x = input("Proceed with user input data? Y/N: \n")
     if x == 'N' or x=='n':
         n = 2
@@ -149,8 +157,8 @@ def ThermalSolve():
         kcond = 45
         nodes = np.empty(n, dtype=object)
         paths = np.empty(n-1, dtype=object)
-        nodes[0] = Node(500,kcond,  A, A, c = 500, h = 10)
-        nodes[1] = Node(200, kcond,A, A, c= 500, h = 10)
+        nodes[0] = Node(500, kcond,  A, A, c = 500, h = 10)
+        nodes[1] = Node(200, kcond, A, A, c= 500, h = 10)
         paths = Path(A, 45,dx)
         t = [0,360]
         t_eval = np.linspace(t[0], t[1], t[1] - t[0])
@@ -174,8 +182,7 @@ def ThermalSolve():
                 Ac = float(input("ENTER CONVECTIVE AREA OF LUMPED NODE: "))
                 print('\n')
                 if (h*V/(Ac*kcond) > 0.1 ):
-                    print("Biot Number is greater than 0.1, does not satisfy Lumped Capacitance Criterion.")
-                    return True
+                    raise Exception("Biot Number is greater than 0.1, does not satisfy Lumped Capacitance Criterion.")
                 Ar = float(input("ENTER RADIATIVE AREA OF LUMPED NODE: "))
                 rho = float(input("ENTER DENSITY OF LUMPED NODE: "))
                 c = float(input("ENTER SPECIFIC HEAT CAPACITY OF LUMPED NODE: "))
@@ -194,10 +201,8 @@ def ThermalSolve():
                 h = float(input("ENTER HEAT TRANSFER COEFFICIENT " +str(i+1)+": "))
                 Ac = float(input("ENTER CONVECTIVE AREA OF LUMPED NODE " +str(i+1)+": "))
                 V = float(input("ENTER VOLUME OF LUMPED NODE " +str(i+1)+": "))
-                print('\n')
                 if (h*V/(Ac*kcond) > 0.1 ):
-                    print("Biot Number is greater than 0.1, does not satisfy Lumped Capacitance Criterion.")
-                    return True
+                    raise Exception("Biot Number is greater than 0.1, does not satisfy Lumped Capacitance Criterion.")
                 Ar = float(input("ENTER RADIATIVE AREA OF LUMPED NODE " +str(i+1)+": "))
                 rho = float(input("ENTER DENSITY OF LUMPED NODE " +str(i+1)+": "))
                 c = float(input("ENTER SPECIFIC HEAT CAPACITY OF LUMPED NODE " +str(i+1)+": "))
