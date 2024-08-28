@@ -1,6 +1,4 @@
 
-
-import numpy as np
 '''
 Assumptions: 
 ignore radiation 
@@ -16,7 +14,10 @@ class Node:
     '''
     Creates Temperature node with HT attributes
     '''
-    def __init__(self, T, Ac=0, Ar = 0,rho = 803, V=.01, c=1, q=0, Eg=0, h=0,Tinf=298,Tsurr=298,e = 0, mat='N/A'):
+    def __init__(self, T, kcond, Ac=0, Ar = 0,rho = 803, V=.01, c=1, q=0, Eg=0, h=0,Tinf=298,Tsurr=298,e = 0, mat='N/A'):
+        if (h*V/(Ac*kcond) > 0.1 ):
+            print("Biot Number is greater than 0.1, does not satisfy Lumped Capacitance Criterion.")
+            return True
         #316 is default material
         self.rho = rho #kg/m3 
         self.V = V #m3
@@ -77,6 +78,9 @@ def pMatrix(paths, n):
         return paths.get_args()
 
 def T_vs_t(t_span, t_eval, nodeMatrix, pathMatrix):
+    '''
+    Iteratively solves Thermal Network. Returns Temperature vs time plot.
+    '''
     n = len(nodeMatrix[0, :])
     T_array = nodeMatrix[0,:]
     rho = nodeMatrix[1,:]
@@ -92,10 +96,16 @@ def T_vs_t(t_span, t_eval, nodeMatrix, pathMatrix):
     V = nodeMatrix[11,:]
 
     if isinstance(pathMatrix, list) == True:
+        '''
+        If only one path, assign path attributes to respective list indices 
+        '''
         A = pathMatrix[0]
         k = pathMatrix[1]
         dx = pathMatrix[2]
     else:
+        '''
+        if more than one path exists
+        '''
         A = pathMatrix[0,:]
         k = pathMatrix[1,:]
         dx = pathMatrix[2,:]
@@ -125,25 +135,32 @@ def T_vs_t(t_span, t_eval, nodeMatrix, pathMatrix):
                             - k[i]*A[i]*(T_array[i] - T_array[i+1]) / (rho[i] * c[i] * dx[i] * V[i]))+(-h[i]*Ac[i]*(T_array[i] - Tinf[i])- sig*e[i]*Ar[i]*(T_array[i]**4 - Tsurr[i]**4))/(rho[i] * c[i]*V[i])
             return dTdt
     
-    solution = solve_ivp(func, t_span=t_span, t_eval=t_eval, y0=T_array, args=(rho,c,q,Eg,Tinf,h,e,A,k,dx,Ac,Ar,V))
-    return solution
+    return solve_ivp(func, t_span=t_span, t_eval=t_eval, y0=T_array, args=(rho,c,q,Eg,Tinf,h,e,A,k,dx,Ac,Ar,V))
+    
 
 def ThermalSolve():
-    x = input("Proceed with user input? Y/N: ")
-    if x ==( "N" or "n"):
+    print("--------------------------\n1-D TRANSIENT THERMAL SOLVER\nBy: Aiden Ryan\nDescription: \nSolver uses lumped capacitance model and scipy's solve_ivp package to output a Temperature vs Time Plot \nof N number of thermal nodes. \n---\nREQUIRED PACKAGES: \n-numpy\n-scipy\n-matplotlib ")
+    print("---\nOTHER REQUIREMENTS: \nEnsure Biot Number for each node is < 0.1 AND Fourier Number is <= 0.5 \nBi = h*L_c/k \nFo = k*dt/(rho*cp*dx**2)\n" )
+    x = input("Proceed with user input data? Y/N: \n")
+    if x == 'N' or x=='n':
         n = 2
         A = 0.1
         dx = 3
+        kcond = 45
         nodes = np.empty(n, dtype=object)
         paths = np.empty(n-1, dtype=object)
-        nodes[0] = Node(500, A, A, c = 500, h = 10)
-        nodes[1] = Node(200, A, A, c= 500, h = 10)
+        nodes[0] = Node(500,kcond,  A, A, c = 500, h = 10)
+        nodes[1] = Node(200, kcond,A, A, c= 500, h = 10)
         paths = Path(A, 45,dx)
         t = [0,360]
-        t_eval = np.linspace(t[0], t[1], 1000)
+        t_eval = np.linspace(t[0], t[1], t[1] - t[0])
         nodeMatrix = TMatrix(nodes)
         pathMatrix = pMatrix(paths, n-1)
-
+        Biot = nodeMatrix[6,:]*pathMatrix[2]/pathMatrix[1]
+        for i in range(len(Biot)):
+            if Biot[i] > 1:
+                print("Conditions do not satisfy Lumped Capacitance Criterion.")
+                return 0
     else:
         n = int(input("Define Number of Nodes: "))
         nodes= np.empty(n,dtype=object)
@@ -151,37 +168,47 @@ def ThermalSolve():
         print("ENTER NODE ATTRIBUTES. \n")
         if n == 1:
                 T = float(input("ENTER TEMPERATURE OF LUMPED NODE: "))
+                kcond = float(input("ENTER THERMAL CONDUCTIVITY OF NODE: "))
+                h = float(input("ENTER HEAT TRANSFER COEFFICIENT: " ))
+                V = float(input("ENTER VOLUME OF LUMPED NODE: "))
                 Ac = float(input("ENTER CONVECTIVE AREA OF LUMPED NODE: "))
+                print('\n')
+                if (h*V/(Ac*kcond) > 0.1 ):
+                    print("Biot Number is greater than 0.1, does not satisfy Lumped Capacitance Criterion.")
+                    return True
                 Ar = float(input("ENTER RADIATIVE AREA OF LUMPED NODE: "))
                 rho = float(input("ENTER DENSITY OF LUMPED NODE: "))
                 c = float(input("ENTER SPECIFIC HEAT CAPACITY OF LUMPED NODE: "))
                 q = float(input("ENTER HEATFLUX THROUGH LUMPED NODE: "))
                 Eg = float(input("ENTER HEAT GENERATED FROM LUMPED NODE: "))
-                h = float(input("ENTER HEAT TRANSFER COEFFICIENT:" ))
                 Tinf = float(input("ENTER TEMPERATURE OF FREESTREAM: "))
                 Tsurr = float(input("ENTER TEMPERATURE OF SURROUNDINGS: "))
                 e = float(input("ENTER EMISSIVITY OF LUMPED NODE: "))
-                V = float(input("ENTER VOLUME OF LUMPED NODE: "))
                 mat = input("ENTER MATERIAL: ")
                 print('\n')
-                nodes[0] = Node(T,Ac, Ar, rho, V,c, q, Eg, h, Tinf, Tsurr, e, mat)
+                nodes[0] = Node(T,kcond, Ac, Ar, rho, V,c, q, Eg, h, Tinf, Tsurr, e, mat)
         else:
             for i in range(n):
                 T = float(input("ENTER TEMPERATURE OF LUMPED NODE " +str(i+1)+": "))
+                kcond = float(input("ENTER THERMAL CONDUCTIVITY OF NODE " +str(i+1)+": "))
+                h = float(input("ENTER HEAT TRANSFER COEFFICIENT " +str(i+1)+": "))
                 Ac = float(input("ENTER CONVECTIVE AREA OF LUMPED NODE " +str(i+1)+": "))
+                V = float(input("ENTER VOLUME OF LUMPED NODE " +str(i+1)+": "))
+                print('\n')
+                if (h*V/(Ac*kcond) > 0.1 ):
+                    print("Biot Number is greater than 0.1, does not satisfy Lumped Capacitance Criterion.")
+                    return True
                 Ar = float(input("ENTER RADIATIVE AREA OF LUMPED NODE " +str(i+1)+": "))
                 rho = float(input("ENTER DENSITY OF LUMPED NODE " +str(i+1)+": "))
                 c = float(input("ENTER SPECIFIC HEAT CAPACITY OF LUMPED NODE " +str(i+1)+": "))
                 q = float(input("ENTER HEATFLUX THROUGH LUMPED NODE " +str(i+1)+": "))
                 Eg = float(input("ENTER HEAT GENERATED FROM LUMPED NODE " +str(i+1)+": "))
-                h = float(input("ENTER HEAT TRANSFER COEFFICIENT " +str(i+1)+": "))
                 Tinf = float(input("ENTER TEMPERATURE OF FREESTREAM " +str(i+1)+": "))
                 Tsurr = float(input("ENTER TEMPERATURE OF SURROUNDINGS: "))
                 e = float(input("ENTER EMISSIVITY OF LUMPED NODE " +str(i+1)+": "))
-                V = float(input("ENTER VOLUME OF LUMPED NODE " +str(i+1)+": "))
                 mat = input("ENTER MATERIAL OF LUMPED NODE " +str(i+1)+": ")
                 print('\n')
-                nodes[i] = Node(T,Ac, Ar, rho, V, c, q, Eg, h, Tinf, Tsurr, e, mat)
+                nodes[i] = Node(T,kcond, Ac, Ar, rho, V, c, q, Eg, h, Tinf, Tsurr, e, mat)
         
         if n == 2:
                 print("ENTER PATH ATTRIBUTES. ENTER 0 TO IGNORE PARAMETER. \n")
@@ -213,7 +240,7 @@ def ThermalSolve():
         t0 = float(input("ENTER TIME START: "))
         tf = float(input("ENTER TIME STOP: "))
         t = [t0,tf]
-        t_eval = np.linspace(t[0], t[1], 1000)
+        t_eval = np.linspace(t[0], t[1], tf-t0)
     
     #Solve
     sol = T_vs_t(t, t_eval = t_eval,nodeMatrix=nodeMatrix, pathMatrix=pathMatrix)
@@ -227,12 +254,12 @@ def ThermalSolve():
         plt.legend()
     plt.show()
     y = input("Would you like to change your time window? Y/N: ")
-    if y == "Y":
-        while y == "Y": 
+    if y == "Y" or y == "y":
+        while y != "N" or y != "n": 
             t0 = float(input("ENTER TIME START: "))
             tf = float(input("ENTER TIME STOP: "))
             t = [t0,tf]
-            t_eval = np.linspace(t[0], t[1], 1000)
+            t_eval = np.linspace(t[0], t[1], tf - t0)
             sol = T_vs_t(t, t_eval = t_eval,nodeMatrix=nodeMatrix, pathMatrix=pathMatrix)
             for i in range(n):
                 plt.plot(sol.t, sol.y[i],label=str(sol.y[i,0]))
@@ -242,5 +269,3 @@ def ThermalSolve():
                 plt.legend()
             plt.show()
             y = input("Would you like to change your time window? Y/N: ")
-
-ThermalSolve()
