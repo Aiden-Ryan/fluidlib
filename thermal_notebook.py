@@ -1,12 +1,10 @@
 # %%
 import sys
+sys.path.append('/Users/125715/python')
 import math as m
 import numpy as np
-import thermal_solver as ts
-from scipy.integrate import solve_ivp
+from fluidlib import thermal_solver as ts
 import matplotlib.pyplot as plt
-from mpl_toolkits import mplot3d
-
 
 # %%
 '''Define Nodes'''
