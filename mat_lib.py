@@ -1,9 +1,9 @@
 import CoolProp.CoolProp as CP
 
 class Material:
-    def __init__(self,density, TS = 0, YS = 0, BS = 0,  E=0, Charpy =0, Izod =0, 
-                 resitivity=0, magneticPermeability =0, poissonsRatio =0,
-                 specificHeatCapacity=0, k = 0, meanMeltingPoint = 0, CTE20C =0, CTE250C = 0, CTE500C = 0,shearStrength =0):
+    def __init__(self,density, TS = 0.0, YS = 0.0, BS = 0.0,  E=0.0, Charpy =0.0, Izod =0.0, 
+                 resitivity=0.0, magneticPermeability =0.0, poissonsRatio =0.0,
+                 specificHeatCapacity=0.0, k = 0.0, meanMeltingPoint = 0.0, CTE20C =0.0, CTE250C = 0.0, CTE500C = 0.0,shearStrength =0.0):
         self.density = density #kg/m3
         self.TS = TS #MPa
         self.YS = YS #MPa

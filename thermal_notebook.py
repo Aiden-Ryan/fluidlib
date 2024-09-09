@@ -5,7 +5,7 @@ import math as m
 import numpy as np
 from fluidlib import thermal_solver as ts
 import matplotlib.pyplot as plt
-import prop_lib as p
+import mat_lib as p
 import conversion_library as c
 
 # # %%
@@ -14,6 +14,7 @@ n = 1
 nodes= np.empty(n,dtype=object)
 paths = [0,0,0]
 nodes[0] = ts.Node(293, mat= "SS316", Ac = c.si2sm(76.969),Ar = c.si2sm(76.969), h = 50, V=c.cintocm(53.26), q = 2520)
+
 '''Define Paths'''
 P1 = ts.Path(.01, k= 45,dx = .01)
 P2 = ts.Path(.01, k = 45, dx = .01)
@@ -32,7 +33,8 @@ for i in range (n):
     plt.plot(sol.t, sol.y[i],label="T0 = " + str(sol.y[i,0]) + "K")
     plt.xlabel("Time (s)")
     plt.ylabel("Temperature (K)")
-    plt.hlines(1312, 0, 6, colors='red', linestyles='--', label='T = 1312K')
+    y = max(sol.y[0,:])
+    plt.hlines(float(max(sol.y[0,:])), 0, 6, colors='red', linestyles='--', label='T = ' +str(float(max(sol.y[0,:]))) + ' K')
     plt.legend()
 
 # %%

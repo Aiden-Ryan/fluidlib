@@ -11,20 +11,19 @@ import mat_lib as p
 
 
 material_mapping = {
-    'SS316': "p.SS316",
     "SS316": "p.SS316",
+    "Al6061": "p.Al6061",
 
 }
 class Node:
     '''
     Creates Temperature node with HT attributes
     '''
-    # def __init__(self, T, kcond, Ac=0, Ar = 0,density = 803, V=.01, c=1, q=0, Eg=0, h=0,Tinf=298,Tsurr=298,e = 0, mat = 'SS316'):
-    def __init__(self, T, mat=p.SS316,  Ac=0, Ar=0, V= 0.01, q=0, Eg = 0, e = 0,h= 0,Tinf=298,Tsurr=298): 
+    def __init__(self, T, mat,  Ac=0.0, Ar=0.0, V= 0.01, q=0.0, Eg = 0.0, e = 0.0,h= 0.0,Tinf=298.0,Tsurr=298.0): 
 
 
         #316 is default material
-        self.mat = eval(material_mapping.get(mat))
+        self.mat = eval(material_mapping.get(mat)) # type: ignore
         self.V = V #m3
         self.T = T #K 
         self.q = q #W
@@ -32,7 +31,7 @@ class Node:
         self.h = h #W/m^2K
         self.Tinf = Tinf #K
         self.Tsurr = Tsurr #K
-        self.e = e # dimensionless, emissivity of body
+        self.e = e # dimensionless, emissivity of body's surface
         self.Ac = Ac #Convection Area
         self.Ar = Ar #Radiation Area
         self.density = p.getMatProp(self.mat, "density")#kg/m3 
@@ -49,7 +48,7 @@ class Path:
     Creates Conduction Pathway between Nodes
     Assumptions: Path is of Constant Area
     '''
-    def __init__(self, A1, k=0, dx=1):
+    def __init__(self, A1=0.0, k=0.0, dx=1.0):
         self.A1 = A1 #Conduction Area [m^2]
         self.k = k #conduction coefficient [W/mK]
         self.dx = dx #length [m]
@@ -152,7 +151,8 @@ def T_vs_t(t_span, t_eval, nodeMatrix, pathMatrix):
 def ThermalSolve():
     print("--------------------------\n1-D TRANSIENT THERMAL SOLVER\nBy: Aiden Ryan\nDescription: \nSolver uses lumped capacitance model and scipy's solve_ivp package to output a Temperature vs Time Plot \nof N number of thermal nodes. \n---\nREQUIRED PACKAGES: \n-numpy\n-scipy\n-matplotlib ")
     print("---\nOTHER REQUIREMENTS: \nEnsure Biot Number for each node is < 0.1 \nBi = h*L_c/k \n")
-    x = input("Proceed with user input data? Y/N: \n")
+    # x = input("Proceed with user input data? Y/N: \n")
+    x = 'Y'
     if x == 'N' or x=='n':
         n = 2
         A = 0.1
@@ -160,8 +160,6 @@ def ThermalSolve():
         kcond = 45
         nodes = np.empty(n, dtype=object)
         paths = np.empty(n-1, dtype=object)
-        nodes[0] = Node(500, kcond,  A, A, c = 500, h = 10)
-        nodes[1] = Node(200, kcond, A, A, c= 500, h = 10)
         paths = Path(A, 45,dx)
         t = [0,360]
         t_eval = np.linspace(t[0], t[1], t[1] - t[0])
@@ -194,33 +192,30 @@ def ThermalSolve():
         else:
             for i in range(n):
                 T = float(input("ENTER TEMPERATURE OF LUMPED NODE " +str(i+1)+": "))
-                kcond = float(input("ENTER THERMAL CONDUCTIVITY OF NODE " +str(i+1)+": "))
+                mat = input("ENTER MATERIAL OF LUMPED NODE " +str(i+1)+": ")
                 h = float(input("ENTER HEAT TRANSFER COEFFICIENT " +str(i+1)+": "))
                 Ac = float(input("ENTER CONVECTIVE AREA OF LUMPED NODE " +str(i+1)+": "))
                 V = float(input("ENTER VOLUME OF LUMPED NODE " +str(i+1)+": "))
-                if (h*V/(Ac*kcond) > 0.1 ):
-                    raise Exception("Biot Number is greater than 0.1, does not satisfy Lumped Capacitance Criterion.")
                 Ar = float(input("ENTER RADIATIVE AREA OF LUMPED NODE " +str(i+1)+": "))
-                rho = float(input("ENTER DENSITY OF LUMPED NODE " +str(i+1)+": "))
-                c = float(input("ENTER SPECIFIC HEAT CAPACITY OF LUMPED NODE " +str(i+1)+": "))
                 q = float(input("ENTER HEATFLUX THROUGH LUMPED NODE " +str(i+1)+": "))
                 Eg = float(input("ENTER HEAT GENERATED FROM LUMPED NODE " +str(i+1)+": "))
                 Tinf = float(input("ENTER TEMPERATURE OF FREESTREAM " +str(i+1)+": "))
                 Tsurr = float(input("ENTER TEMPERATURE OF SURROUNDINGS: "))
                 e = float(input("ENTER EMISSIVITY OF LUMPED NODE " +str(i+1)+": "))
-                mat = input("ENTER MATERIAL OF LUMPED NODE " +str(i+1)+": ")
-                print('\n')
-                nodes[i] = Node(T,kcond, Ac, Ar, rho, V, c, q, Eg, h, Tinf, Tsurr, e, mat)
+                nodes[i] = Node(T,mat, Ac, Ar, V, q, Eg, e, h , Tinf, Tsurr)
         
         if n == 2:
-                print("ENTER PATH ATTRIBUTES. ENTER 0 TO IGNORE PARAMETER. ")
-                A = float(input("ENTER CONDUCTION PATH AREA: "))
-                k = float(input("ENTER CONDUCTION COEFFICIENT: "))
-                dx = float(input("ENTER DISTANCE BETWEEN NODES: "))
-                print('\n')
-                paths= Path(A, k, dx)
-        elif n > 2:
+            '''SINGLE PATH'''
             print("ENTER PATH ATTRIBUTES. ENTER 0 TO IGNORE PARAMETER. ")
+            A = float(input("ENTER CONDUCTION PATH AREA: "))
+            k = float(input("ENTER CONDUCTION COEFFICIENT: "))
+            dx = float(input("ENTER DISTANCE BETWEEN NODES: "))
+            print('\n')
+            paths= Path(A, k, dx)
+        elif n > 2:
+            '''MORE THAN ONE PATH'''
+            print("ENTER PATH ATTRIBUTES. ENTER 0 TO IGNORE PARAMETER. ")
+            paths = np.empty(n-1, dtype=object)
             for i in range(n-1):
                 A = float(input("ENTER CONDUCTION PATH AREA: "))
                 k = float(input("ENTER CONDUCTION COEFFICIENT: "))
@@ -273,4 +268,5 @@ def ThermalSolve():
                 plt.legend()
             plt.show()
             y = input("Would you like to change your time window? Y/N: ")
-        print("goodbye.")
+    print("goodbye.")
+ThermalSolve()
