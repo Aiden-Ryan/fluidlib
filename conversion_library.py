@@ -133,6 +133,7 @@ def mdotIG(P1, P2, T1, CdA, fluid):
     PcOverP1 = (2/(gamma+1))**(gamma/(gamma-1))
 
     if P2/P1 <= PcOverP1:
+        '''CHOKED'''
         return CdA*P1*((g*gamma/(R*T1))*(2/(gamma+1))**((gamma+1)/(gamma-1)))**.5
     else:
         return CdA*(P2/P1)**(1/gamma)*(2*g*R*T1*(gamma/(gamma-1))*(1-(P2/P1)**((gamma-1)/gamma)))**.5
