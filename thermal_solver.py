@@ -131,7 +131,7 @@ def T_vs_t(t_span, t_eval, nodeMatrix, pathMatrix):
             - h[1]*Ac[1]*(T_array[1] - Tinf[1]) - sig*e[1]*Ar[1]*(T_array[1]**4 - Tsurr[1]**4))/(rho[1] *c[1]*V[1])
             return dTdt       
         elif n == 1:
-            return q+Eg- h*Ac*(T_array - Tinf) - sig*e*Ar*(T_array**4 - Tsurr**4)/(rho *c*V)
+            return (q+Eg- h*Ac*(T_array - Tinf) - sig*e*Ar*(T_array**4 - Tsurr**4))/(rho *c*V)
         else:
             for i in range(n):
                 if i == 0:
