@@ -1,5 +1,5 @@
 import CoolProp.CoolProp as CP
-import conversion_library as c
+import other.conversion_library as c
 
 class Material:
     def __init__(self,density, TS = 0.0, YS = 0.0, BS = 0.0,  E=0.0, Charpy =0.0, Izod =0.0, 

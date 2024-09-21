@@ -1,0 +1,7 @@
+README.md
+setup.py
+fluidlib.egg-info/PKG-INFO
+fluidlib.egg-info/SOURCES.txt
+fluidlib.egg-info/dependency_links.txt
+fluidlib.egg-info/requires.txt
+fluidlib.egg-info/top_level.txt

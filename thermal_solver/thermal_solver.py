@@ -7,8 +7,8 @@ ignore radiation
 import numpy as np
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
-import mat_lib as p
-import conversion_library as c
+import other.mat_lib as p
+import other.conversion_library as c
 
 material_mapping = {
     "SS316": "p.SS316",

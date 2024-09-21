@@ -1,12 +1,8 @@
 # %%
-import sys
-sys.path.append('/Users/125715/python')
 import math as m
 import numpy as np
-from fluidlib import thermal_solver as ts
+import thermal_solver as ts
 import matplotlib.pyplot as plt
-import mat_lib as p
-import conversion_library as c
 
 #
 n = 1
