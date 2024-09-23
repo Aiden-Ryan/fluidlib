@@ -1,4 +1,4 @@
-import CoolProp.CoolProp as CP
+
 import conversion_library as c
 
 class Material:
