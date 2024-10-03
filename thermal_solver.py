@@ -18,7 +18,7 @@ class Node:
     '''
     Creates Temperature node with HT attributes
     '''
-    def __init__(self, T, medium, medium_type, V= 0.01, Eg = 0.0, Pressure = 0,isothermal = 0,connectedPaths = None, Tsurr = 298.15, e = 0.0,Arad = 0.0): 
+    def __init__(self, T, medium, medium_type, V= 0.01, Eg = 0.0, Pressure = 0,isothermal = False,connectedPaths = None, Tsurr = 298.15, e = 0.0,Arad = 0.0): 
         '''
         T = type::float; initial temperature, K
         
@@ -54,7 +54,7 @@ class Path:
         self.Aconv = Aconv #Convection Area [m^2]
         self.Arad = Arad #Radiation Area [m^2]
         self.dx = dx #length [m]
-        self.h = h #Overall heat transfer coefficient [W/m2K]
+        self.h = h # Overall heat transfer coefficient [W/m2K]
         self.e = e # dimensionless, emissivity of body's surface
         self.nodeA = nodeA 
         self.nodeB = nodeB
@@ -90,9 +90,9 @@ def T_vs_t(t, t_eval, path, nodes):
             Tsurr1 = path.nodeB.Tsurr
             sig = 5.678e-8
 
-            dTdt[0] = (- k * Acond*(T[0] - T[1]) / dx - h * Aconv *(T[0] - T[[1]]) - (sig * e0 * Arad0 * (T[0]**4 - Tsurr0**4)))/(path.nodeA.density*path.nodeA.V*path.nodeA.c)
+            dTdt[0] = (- k * Acond*(T[0] - T[1]) / dx - h * Aconv *(T[0] - T[[1]]) - (sig * e0 * Arad0 * (T[0]**4 - Tsurr0**4)))/(path.nodeA.density*path.nodeA.V*path.nodeA.c) if nodes[0].isothermal == False else 0 
 
-            dTdt[1] =  (- k * Acond*(T[1] - T[0]) / dx - h * Aconv *(T[1] - T[0]) - (sig * e1 * Arad1 * (T[1]**4 - Tsurr1**4)))/(path.nodeB.density*path.nodeB.V*path.nodeB.c)
+            dTdt[1] =  (- k * Acond*(T[1] - T[0]) / dx - h * Aconv *(T[1] - T[0]) - (sig * e1 * Arad1 * (T[1]**4 - Tsurr1**4)))/(path.nodeB.density*path.nodeB.V*path.nodeB.c) if nodes[0].isothermal == False else 0
 
             return dTdt
         else:
@@ -118,9 +118,9 @@ def T_vs_t(t, t_eval, path, nodes):
                     T2 = T[nodes.index(path[P[j]].nodeB)]
 
                     if nodes.index(path[P[j]].nodeA) == i: #If T being accessed is from iteration node; use this equation
-                        dTdt[i] = dTdt[i] - (k*Acond*(T1-T2) / dx + h * Aconv * (T1 - T2) + e*sig*Arad*(T1**4 - Tsurr**4))/(path[P[j]].nodeA.density * path[P[j]].nodeA.V * path[P[j]].nodeA.c) if nodes[i].isothermal == 0 else 0
+                        dTdt[i] = dTdt[i] - (k*Acond*(T1-T2) / dx + h * Aconv * (T1 - T2) + e*sig*Arad*(T1**4 - Tsurr**4))/(path[P[j]].nodeA.density * path[P[j]].nodeA.V * path[P[j]].nodeA.c) if nodes[i].isothermal == False else 0
                     elif nodes.index(path[P[j]].nodeA) != i: #If T being accessed is not from iteration node; use this equation
-                        dTdt[i] =  dTdt[i] + (k*Acond*(T1-T2) / dx + h * Aconv * (T1 - T2) + e*sig*Arad*(T1**4 - Tsurr**4))/(path[P[j]].nodeA.density * path[P[j]].nodeA.V * path[P[j]].nodeA.c) if nodes[i].isothermal == 0 else 0
+                        dTdt[i] =  dTdt[i] + (k*Acond*(T1-T2) / dx + h * Aconv * (T1 - T2) + e*sig*Arad*(T1**4 - Tsurr**4))/(path[P[j]].nodeA.density * path[P[j]].nodeA.V * path[P[j]].nodeA.c) if nodes[i].isothermal == False else 0
             return dTdt 
         
     return solve_ivp(func, t_span=t, t_eval=t_eval, y0=T,method='LSODA',atol=1e-7)
