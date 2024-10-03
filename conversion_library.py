@@ -2,6 +2,7 @@ import sys
 
 import numpy as np
 import CoolProp.CoolProp as CP
+from CoolProp.CoolProp import PropsSI
 from ctREFPROP.ctREFPROP import REFPROPFunctionLibrary
 import math as m
 import os
@@ -26,20 +27,116 @@ def getR(fluid):
     return R
 
 
-def getFluidProperty(hOut, hIn, val1, val2, hFLd): 
-    '''
-    Returns thermodynamic property for two provided properties and specified fluid
-    hFLd - fluid
-    hIn ~ "P1P2"
-    hOut ~ "P3"
-    '''
-    if check == 0:
-        prop3 = RP.REFPROPdll(hFLd,hIn,hOut, MOLAR_BASE_SI,0,0,val1, val2, [1.0]) # Don't know what the two zeros are for exactly but 
-    else:
-        prop1 = hIn[0]
-        prop2 = hIn[1]
-        prop3 = CP.PropsSI(hOut, prop1, val1, prop2, val2, hFLd)
-    return prop3
+backend = "REFPROP"
+try:
+    RP = REFPROPFunctionLibrary(os.environ["RPPREFIX"])
+    RP.SETPATHdll(os.environ["RPPREFIX"])
+    MASS_BASE_SI = RP.GETENUMdll(0,"MASS BASE SI").iEnum
+except:
+    print("REFPROP not found, defaulting to CoolProp")
+    backend = "CoolProp"
+    MASS_BASE_SI = "NA"
+
+#Fluid Properties
+#start section
+
+# CoolProp input dictionary
+CoolProp_names = {
+    "TCX": "CONDUCTIVITY",
+    "CP": "CPMASS",
+    "CV": "CVMASS"
+}
+
+def getfluidproperty(
+    fluid,
+    desired_property,
+    first_property,
+    first_value,
+    second_property,
+    second_value,
+    BASE= MASS_BASE_SI,
+    backend = backend
+    ):
+    """
+    Returns desired property in SI units
+    All inputs in REFPROP syntax
+    fluid: name of fluid, string
+    desired_property: property tag, string
+    first_property: first of 2 thermo properties, string
+    first_value: value of first thermo property, SI units
+    second_property: second of 2 thermo properties, string
+    second_value: value of second thermo property, SI units
+    BASE: default is MASS BASE, other option is MOLAR_BASE_SI
+    backend: set by file, but options are "REFPROP" or "CoolProp"
+    """
+
+    if backend == "REFPROP":
+        output = RP.REFPROPdll(
+            fluid,
+            first_property+second_property,
+            desired_property,
+            BASE,
+            1,
+            0,
+            first_value,
+            second_value,
+            [1.0]
+        ).Output[0]
+    elif backend == "CoolProp":
+        if fluid == "CARBON DIOXIDE":
+            fluid = "CARBONDIOXIDE"
+        if desired_property == "CP/CV":
+            output = PropsSI(
+                "C",
+                first_property,
+                first_value,
+                second_property,
+                second_value,
+                fluid
+            ) / PropsSI(
+                "O",
+                first_property,
+                first_value,
+                second_property,
+                second_value,
+                fluid
+            )
+        elif desired_property == "R":
+            output = PropsSI(
+                "GAS_CONSTANT",
+                first_property,
+                first_value,
+                second_property,
+                second_value,
+                fluid
+            ) / PropsSI(
+                "M",
+                first_property,
+                first_value,
+                second_property,
+                second_value,
+                fluid
+            )
+        else:
+            if CoolProp_names[desired_property] is not None:
+                output = PropsSI(
+                    CoolProp_names[desired_property],
+                    first_property,
+                    first_value,
+                    second_property,
+                    second_value,
+                    fluid
+                )
+            else:
+                output = PropsSI(
+                    desired_property,
+                    first_property,
+                    first_value,
+                    second_property,
+                    second_value,
+                    fluid
+                )
+    return output
 
 
 # Cv Conversions 
