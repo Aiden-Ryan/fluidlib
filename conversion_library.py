@@ -7,14 +7,6 @@ from ctREFPROP.ctREFPROP import REFPROPFunctionLibrary
 import math as m
 import os
 
-check = 0
-try:
-    RP = REFPROPFunctionLibrary(os.environ['RPPREFIX'])
-    RP.SETPATHdll(os.environ['RPPREFIX'])
-    MOLAR_BASE_SI = RP.GETENUMdll(0,"MOLAR BASE SI").iEnum
-except:
-    print("REFPROP unavailable, defaulting to CoolProp")
-    check = 1
 
 # Getters
 def getR(fluid):
@@ -44,7 +36,8 @@ except:
 CoolProp_names = {
     "TCX": "CONDUCTIVITY",
     "CP": "CPMASS",
-    "CV": "CVMASS"
+    "CV": "CVMASS",
+    "D" :"D"
 }
 
 def getfluidproperty(
@@ -225,7 +218,7 @@ def mdotIG(P1, P2, T1, CdA, fluid):
     '''
     g = 9.81 #m/s^2
     R = getR(fluid)
-    cp = getFluidProperty(fluid, 'PT', 'Cp0mass', P1, T1) #Need to be able to distinguish between Coolprop and REFPROP
+    cp = getfluidproperty(fluid, 'Cp0mass','P', P1,'T', T1) #Need to be able to distinguish between Coolprop and REFPROP
     gamma = cp/(cp - R)
     PcOverP1 = (2/(gamma+1))**(gamma/(gamma-1))
 
