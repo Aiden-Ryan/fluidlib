@@ -1,5 +1,6 @@
 
-import sys,os
+import sys
+from utilities import*
 from PySide6.QtWidgets import(
      QApplication, 
      QLabel, 
@@ -13,18 +14,13 @@ from PySide6.QtWidgets import(
      QSpinBox,
      QComboBox,
      QGridLayout,
-     QSpacerItem,
-     QSizePolicy
      )
 sys.path.append("C:/Users/125715/python")
 
 from fluidlib import thermal_solver as t
-from PySide6.QtGui import QColor, QFont
-from PySide6.QtCore import Slot,  Qt, Signal
+from PySide6.QtCore import Qt
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
-from matplotlib.image import imread
 import numpy as np
 
 
@@ -70,7 +66,8 @@ class thermalSolver(QWidget):
         self.plotLayout = QVBoxLayout()
         self.unitLayout = QVBoxLayout()
 
-        #LABELS 
+        #region LABELS 
+        
         self.numberOfNodeLabel = QLabel("CURRENT NODE")
         self.temperatureLabel = QLabel("NODE TEMPERATURE, K" )
         self.mediumTypeLabel = QLabel("MEDIUM TYPE")
@@ -98,15 +95,17 @@ class thermalSolver(QWidget):
         self.energyUnitsLabel = QLabel("Energy Units")
         self.areaUnitsLabel = QLabel("Area Units")
         self.distanceUnitsLabel = QLabel("Distance Units")
+        self.timeUnitsLabel = QLabel("Time Units")
         self.heatTransferModeLabel = QLabel("HEAT TRANSFER MODE")
-        
-        #UNIT DROPDOWN MENUS
+        #endregion LABELS
+
+        #region UNIT DROPDOWN MENUS
         self.pressureUnits = QComboBox()
         self.pressureUnits.addItems(["Pa","psig", "psia",  "bar,g","bar,a","atm"])
         self.pressureUnits.currentTextChanged.connect(self.updatePressureUnits)
 
         self.temperatureUnits = QComboBox()
-        self.temperatureUnits.addItems(["K","C","F","R"])
+        self.temperatureUnits.addItems(["K","C","F","Rank"])
         self.temperatureUnits.currentTextChanged.connect(self.updateTemperatureUnits)
         
         self.volumeUnits = QComboBox()
@@ -125,12 +124,17 @@ class thermalSolver(QWidget):
         self.distanceUnits.addItems(["m", "mm", "ft","in"])
         self.distanceUnits.currentTextChanged.connect(self.updateDistanceUnits)
 
+        self.timeUnits = QComboBox()
+        self.timeUnits.addItems(["s", "min", "hr"])
+        self.timeUnits.currentTextChanged.connect(self.updateTimeUnits)
+        #endregion UNIT DROPDOWN MENUS
         
+        #region OUTPUT TEXT PRINTING 
+        self.outputText = QLabel()
+        self.outputText.setVisible(False)
+        #endregion OUTPUT TEXT PRINTING
 
-        # ERROR PRINTING 
-        self.errorText = QLabel()
-        self.errorText.setVisible(False)
-        #NODE ATTRIBUTE SELECTIONS
+        #region NODE ATTRIBUTE SELECTIONS
         self.currentNodeSelection = QSpinBox()
         self.currentNodeSelection.setRange(1,1)
 
@@ -165,8 +169,10 @@ class thermalSolver(QWidget):
         self.isothermalInput = QComboBox()
         self.isothermalInput.addItems(["True", "False"])
         self.isothermalInput.setCurrentIndex(1)
+        self.isothermalInput.currentTextChanged.connect(self.toggleIsothermal)
+        #endregion NODE ATTRIBUTE SELECTIONS
 
-        #PATH ATTRIBUTE SELECTIONS
+        #region PATH ATTRIBUTE SELECTIONS
         self.currentPathSelection = QSpinBox()
         self.currentPathSelection.setRange(1, 20)
 
@@ -184,38 +190,47 @@ class thermalSolver(QWidget):
 
         self.dxInput = QLineEdit()
         self.dxInput.setPlaceholderText(".01")
+        #endregion PATH ATTRIBUTE SELECTIONS
 
-        #TIME INPUT 
+        #region TIME INPUT 
         self.timeInitialInput = QLineEdit()
         self.timeInitialInput.setPlaceholderText("0")
 
         self.timeFinalInput = QLineEdit()
         self.timeFinalInput.setPlaceholderText("3600")
-
-        #NODE TREE
+        #endregion TIME INPUT
+        
+        #region NODE TREE
         self.nodeTree = QTreeWidget()
         self.nodeTree.setColumnCount(3)
         self.nodeTree.setColumnWidth(0, 150)
         self.nodeTree.setHeaderLabels(["ATTRIBUTES", "VALUES", "UNITS"])
         self.nodeLayout.addWidget(self.nodeTreeTitle,alignment=Qt.AlignmentFlag.AlignHCenter)
         self.nodeLayout.addWidget(self.nodeTree)
+        self.nodeTree.itemClicked.connect(self.updateNodeEntries)
+        #endregion NODE TREE
 
-        #PATH TREE
+        #region PATH TREE
         self.pathTree = QTreeWidget()
         self.pathTree.setColumnCount(3)
         self.pathTree.setColumnWidth(0,150) 
         self.pathTree.setHeaderLabels(["ATRRIBUTES", "VALUES", "UNITS"])
         self.pathLayout.addWidget(self.pathTreeTitle,alignment=Qt.AlignmentFlag.AlignHCenter)
         self.pathLayout.addWidget(self.pathTree)
+        self.pathTree.itemClicked.connect(self.updatePathEntries)
 
-        #NODE AND PATH SELECTIONS
+        #endregion PATH TREE
+
+        #region NODE AND PATH SELECTIONS
         self.connectedNodesSelection1 = QComboBox()
         self.connectedNodesSelection2 = QComboBox()
         self.connectedNodesSelection1.setCurrentIndex(-1)
         self.connectedNodesSelection2.setCurrentIndex(-1) 
         self.connectedNodesSelection1.currentIndexChanged.connect(self.changeNodeSelectionItems)
-        
-        #SET NODE ATTRIBUTE INPUT LAYOUT
+        #endregion NODE AND PATH SELECTIONS
+
+        #region SET NODE ATTRIBUTE INPUT LAYOUT
+
         self.attributeLayout.addWidget(self.numberOfNodeLabel)
         self.attributeLayout.addWidget(self.currentNodeSelection)
 
@@ -225,14 +240,14 @@ class thermalSolver(QWidget):
         self.attributeLayout.addWidget(self.temperatureLabel)
         self.attributeLayout.addWidget(self.temperatureInput)
 
-        self.attributeLayout.addWidget(self.volumeLabel)
-        self.attributeLayout.addWidget(self.volumeInput)
-
         self.attributeLayout.addWidget(self.mediumTypeLabel)
         self.attributeLayout.addWidget(self.mediumTypeSelection)
         self.attributeLayout.addWidget(self.mediumLabel)
         self.attributeLayout.addWidget(self.mediumSelection)
         
+        self.attributeLayout.addWidget(self.volumeLabel)
+        self.attributeLayout.addWidget(self.volumeInput)
+
         self.attributeLayout.addWidget(self.pressureLabel)
         self.attributeLayout.addWidget(self.pressureInput)
         
@@ -244,9 +259,9 @@ class thermalSolver(QWidget):
         
         self.attributeLayout.addWidget(self.absorbivityLabel)
         self.attributeLayout.addWidget(self.absorbivityInput)
-        
+        #endregion SET NODE ATTRIBUTE INPUT LAYOUT
      
-        #SET PATH ATTRIBUTE INPUT LAYOUT
+        #region SET PATH ATTRIBUTE INPUT LAYOUT
         self.pathAttributeLayout.addWidget(self.numberofPathsLabel)
         self.pathAttributeLayout.addWidget(self.currentPathSelection)
 
@@ -267,8 +282,9 @@ class thermalSolver(QWidget):
         self.pathAttributeLayout.addWidget(self.connectedNodesSelection1)
         self.pathAttributeLayout.addWidget(self.nodeB)
         self.pathAttributeLayout.addWidget(self.connectedNodesSelection2)
-
-        #SET TIME INPUT LAYOUT
+        #endregion SET PATH ATTRIBUTE INPUT LAYOUT
+        
+        #region SET TIME INPUT LAYOUT
         
         self.timeEvalAndUnitLayout.addWidget(self.pressureUnitsLabel)
         self.timeEvalAndUnitLayout.addWidget(self.pressureUnits)
@@ -282,20 +298,24 @@ class thermalSolver(QWidget):
         self.timeEvalAndUnitLayout.addWidget(self.areaUnits)
         self.timeEvalAndUnitLayout.addWidget(self.distanceUnitsLabel)
         self.timeEvalAndUnitLayout.addWidget(self.distanceUnits)
+        self.timeEvalAndUnitLayout.addWidget(self.timeUnitsLabel)
+        self.timeEvalAndUnitLayout.addWidget(self.timeUnits)
         
         self.timeEvalAndUnitLayout.addWidget(self.timeInitialLabel)
         self.timeEvalAndUnitLayout.addWidget(self.timeInitialInput)
         self.timeEvalAndUnitLayout.addWidget(self.timeFinalLabel)
         self.timeEvalAndUnitLayout.addWidget(self.timeFinalInput)
-        self.timeEvalAndUnitLayout.addWidget(self.errorText)
+        self.timeEvalAndUnitLayout.addWidget(self.outputText)
+        #endregion SET TIME INPUT LAYOUT
 
-        #PLOT LAYOUT
+        #region PLOT LAYOUT
         self.canvas = MplCanvas(self,width=5, height=2, dpi = 100)
         self.canvas.ax.set_title("Node Temperature vs Time")
         self.canvas.ax.grid(True)
         self.plotLayout.addWidget(self.canvas)
+        #endregion PLOT LAYOUT
         
-        #BUTTONS
+        #region BUTTONS
         
         self.updateNodeButton = QPushButton("Update Node")
 
@@ -324,16 +344,18 @@ class thermalSolver(QWidget):
         self.clearAllButton.pressed.connect(self.clearAll)
         self.attributeLayout.addWidget(self.clearAllButton)
 
-        #SET OUTER LAYOUT
+        #endregion BUTTONS
+
+        #region SET OUTER LAYOUT
         self.outerLayout.addLayout(self.attributeLayout, 0,0)
         self.outerLayout.addLayout(self.nodeLayout,0,1)
         self.outerLayout.addLayout(self.pathLayout, 1, 1)
         self.outerLayout.addLayout(self.pathAttributeLayout,1,0)
         self.outerLayout.addLayout(self.timeEvalAndUnitLayout, 0,2)
         self.outerLayout.addLayout(self.plotLayout,1,2)
-        
+    
         self.setLayout(self.outerLayout)
-        
+        #endregion SET OUTER LAYOUT
 
     #Set Node Selection based on foregoing Node Selection for path
     def setNodeSelection(self): 
@@ -357,7 +379,7 @@ class thermalSolver(QWidget):
                 "MEDIUM,"+self.mediumSelection.currentText()+':', 
                 "PRESSURE,"+ (self.pressureInput.text()) + ':'+self.pressureUnits.currentText() if self.mediumTypeSelection.currentText() == "FLUID" else '' , 
                 "HEAT GENERATED," + (self.heatGeneratedInput.text()) + ':'+self.energyUnits.currentText() if self.heatGeneratedInput.text() != '' else '', 
-                "VOLUME," + (self.volumeInput.text()) +':'+ self.volumeUnits.currentText(), 
+                "VOLUME," + (self.volumeInput.text()) +':'+ self.volumeUnits.currentText()if self.isothermalInput.currentText() == "False" else '', 
                 "EMISSIVITY," + (self.emissivityInput.text()) +':'if self.mediumTypeSelection.currentText() == "SOLID" else '', 
                 "ABSORPTIVITY,"+(self.absorbivityInput.text()) +':'if self.mediumTypeSelection.currentText() == "SOLID" else '',
                 "ISOTHERMAL," + (self.isothermalInput.currentText()) + ':'
@@ -365,12 +387,29 @@ class thermalSolver(QWidget):
             '''Stores node in backend nodes and updates nodes using identifier attribute'''
             self.backendNodes = [node for node in self.backendNodes if node.identifier != self.currentNodeSelection.value()]
             self.backendNodes.append(t.Node(
-                T = float(self.temperatureInput.text()) if self.temperatureInput.text() != '' else 300, 
+    
+                T = unit_convert(
+                    float(self.temperatureInput.text()), 
+                    self.temperatureUnits.currentText(),
+                    "K"
+                ) if self.temperatureInput.text() != '' else 300, 
                 medium= self.mediumSelection.currentText(),
                 medium_type=self.mediumTypeSelection.currentText() if self.mediumTypeSelection.currentText() != '' else "SOLID",
-                Pressure=float(self.pressureInput.text()) if self.mediumTypeSelection.currentText() == 'FLUID' else 0.0,
-                Eg = float(self.heatGeneratedInput.text()) if self.heatGeneratedInput.text() != '' else 0.0, 
-                V= float(self.volumeInput.text()) if self.volumeInput.text() != '' else 0.0, 
+                Pressure= unit_convert(
+                    float(self.pressureInput.text()),
+                    self.pressureUnits.currentText(), 
+                    "Pa", 
+                ) if self.mediumTypeSelection.currentText() == 'FLUID' else 0.0,
+                Eg = unit_convert(
+                    float(self.heatGeneratedInput.text()),
+                    self.energyUnits.currentText(), 
+                    "W",
+                ) if self.heatGeneratedInput.text() != '' or self.isothermalInput == False else 0.0, 
+                V= unit_convert(
+                    float(self.volumeInput.text()),
+                    self.volumeUnits.currentText(),
+                    "m^3",
+                ) if self.isothermalInput.currentText() == "False" else 0.0, 
                 #remove emissivity input
                 isothermal= eval(self.isothermalInput.currentText()) if self.isothermalInput.currentText() != '' else False,
                 identifier=self.currentNodeSelection.value()
@@ -387,7 +426,7 @@ class thermalSolver(QWidget):
                 else:
                     nodeAssignment = QTreeWidgetItem([key])
                 for value in values:
-                    if value == '':
+                    if value == '' or value == 0.0:
                         pass
                     else:
                         label = value.split(",")[0]
@@ -408,84 +447,99 @@ class thermalSolver(QWidget):
                     self.backendPaths[i].nodeA = updatedNode
                 elif updatedNode != node2 and updatedNode.identifier == node2.identifier:
                     self.backendPaths[i].nodeB = updatedNode
-
+            self.outputText.setVisible(True)
+            self.outputText.setText(f"Node {self.currentNodeSelection.text()} has been updated.")
             self.currentNodeSelection.setMaximum(int(self.currentNodeSelection.maximum())+1)
             self.currentNodeSelection.setValue(self.currentNodeSelection.value() + 1)
             self.nodeTree.insertTopLevelItems(0, items)
+           
         except:
-            self.errorText.setVisible(True)
-            self.errorText.setText("Something went wrong with node update. Check node inputs.")
+            self.outputText.setVisible(True)
+            self.outputText.setText("Something went wrong with node update. Check node inputs.")
 
     def updatePath(self): 
-        '''First checks if path already exists AND is not updating pre-existing path'''
-        nume1 = int(self.connectedNodesSelection1.currentText().split(' ')[-1])
-        denom1 = int(self.connectedNodesSelection2.currentText().split(' ')[-1])
-        
-        for i in range(self.pathTree.topLevelItemCount()):
-            nume2 = int(self.paths['Path ' + str(i+1)][0].split(' ')[-1])
-            denom2 = int(self.paths['Path ' + str(i+1)][1].split(' ')[-1])   
-            prod = (nume1/denom1)*(nume2/denom2) 
-            if self.currentPathSelection.text() != self.pathTree.topLevelItem(i).text(0).split(' ')[-1]:
-                if prod == (nume2/denom2)**2 or prod == 1:
+        try:
+            '''First checks if path already exists AND is not updating pre-existing path'''
+            nume1 = int(self.connectedNodesSelection1.currentText().split(' ')[-1])
+            denom1 = int(self.connectedNodesSelection2.currentText().split(' ')[-1])
+            
+            print(self.pathTree.topLevelItemCount())
+            for i in range(self.pathTree.topLevelItemCount()):
+                nume2 = int(self.paths[self.pathTree.topLevelItem(i).text(0)][0].split(' ')[-1])
+                denom2 = int(self.paths[self.pathTree.topLevelItem(i).text(0)][1].split(' ')[-1])   
+                prod = (nume1/denom1)*(nume2/denom2) 
+                if prod == (nume2/denom2)**2 or prod == 1 and self.pathTree.topLevelItem(i).text(0).split(' ')[-1] != self.currentPathSelection.text(): 
                     print("Path already exists")
                     return 1
-        self.pathTree.clear()
-        attributes =[ 
-            "Node A," + self.connectedNodesSelection1.currentText(),
-            "Node B," + self.connectedNodesSelection2.currentText(),
-            "h," + self.heatTransferCoefficientInput.text(),
-            "Area," + self.heatTransferAreaInput.text(),
-            "dx," + self.dxInput.text()
-
-        ]
-        self.backendPaths = [path for path in self.backendPaths if path.identifier != self.currentPathSelection.value()]
-        self.paths = dict(sorted(self.paths.items()))
-        '''Look for connected nodes using identifier'''
-        for i in range(len(self.backendNodes)):
-            if self.backendNodes[i].identifier == int(self.connectedNodesSelection1.currentText().split(" ")[-1]):
-                node1 = self.backendNodes[i]
-            elif self.backendNodes[i].identifier == int(self.connectedNodesSelection2.currentText().split(" ")[-1]):
-                node2 = self.backendNodes[i]
-       
-        self.backendPaths.append(t.Path(
-            nodeA= node1,
-            nodeB= node2,
-            Area = float(self.heatTransferAreaInput.text()) if self.heatTransferAreaInput.text() != '' else 0.01,
-            h = float(self.heatTransferCoefficientInput.text()) if self.heatTransferCoefficientInput != '' else 0.0, 
-            dx = float(self.dxInput.text()),
-            identifier= self.currentPathSelection.value()
-        ))
-
-        self.paths['Path ' + str(self.currentPathSelection.value())] = attributes
-        items = []
-        for key,values in self.paths.items():
-                if key == '': 
-                    pass
-                else:
-                    pathAssignment = QTreeWidgetItem([key])
-                for value in values:
-                    if value == '':
+            self.pathTree.clear()
+            attributes =[ 
+                "Node A," + self.connectedNodesSelection1.currentText(),
+                "Node B," + self.connectedNodesSelection2.currentText(),
+                "h," + self.heatTransferCoefficientInput.text() if self.heatTransferModeInput.currentText() == "CONVECTION" else '',
+                "Area," + self.heatTransferAreaInput.text(),
+                "dx," + self.dxInput.text() if self.heatTransferModeInput.currentText() == "CONDUCTION" else '',
+                f"{self.heatTransferModeInput}"
+            ]
+            self.backendPaths = [path for path in self.backendPaths if path.identifier != self.currentPathSelection.value()]
+            
+            '''Look for connected nodes using identifier'''
+            for i in range(len(self.backendNodes)):
+                if self.backendNodes[i].identifier == int(self.connectedNodesSelection1.currentText().split(" ")[-1]):
+                    node1 = self.backendNodes[i]
+                elif self.backendNodes[i].identifier == int(self.connectedNodesSelection2.currentText().split(" ")[-1]):
+                    node2 = self.backendNodes[i]
+        
+            self.backendPaths.append(t.Path(
+                nodeA= node1,
+                nodeB= node2,
+                Area = unit_convert(
+                    float(self.heatTransferAreaInput.text()),
+                    self.areaUnits.currentText(),
+                    "m^2",
+                ) if self.heatTransferAreaInput.text() != '' else 0.01,
+                h = float(self.heatTransferCoefficientInput.text()) if self.heatTransferCoefficientInput.text() != '' else 0.0, 
+                dx = unit_convert(
+                    float(self.dxInput.text()),
+                    self.distanceUnits.currentText(),
+                    'm'
+                ) if self.dxInput.text() != '' else 1.0,
+                identifier= self.currentPathSelection.value()
+            ))
+           
+            self.paths['Path ' + str(self.currentPathSelection.value())] = attributes
+            self.paths = dict(sorted(self.paths.items()))
+            items = []
+            for key,values in self.paths.items():
+                    if key == '': 
                         pass
                     else:
-                        label = value.split(",")[0]
-                        val = value.split(",")[-1]
-                        child = QTreeWidgetItem([label,val])
-                        pathAssignment.addChild(child)
-                items.append(pathAssignment)
-        self.currentPathSelection.setValue(self.currentPathSelection.value() + 1)
-        self.pathTree.insertTopLevelItems(0, items)
-        print(self.paths)
-        print(self.backendPaths)
+                        pathAssignment = QTreeWidgetItem([key])
+                    for value in values:
+                        if value == '':
+                            pass
+                        else:
+                            label = value.split(",")[0]
+                            val = value.split(",")[-1]
+                            child = QTreeWidgetItem([label,val])
+                            pathAssignment.addChild(child)
+                    items.append(pathAssignment)
+            self.currentPathSelection.setValue(self.currentPathSelection.value() + 1)
+            self.pathTree.insertTopLevelItems(0, items)
+            print(self.paths)
+            print(self.backendPaths)
+        except Exception as e: 
+            print(e)
+            self.outputText.setText("Something went wrong with path inputs")   
 
     #Sets Selection Medium based on medium type selection
     def changeMediumSelectionItems(self): 
         self.mediumSelection.clear()
         if self.mediumTypeSelection.currentText() == "SOLID": 
-            self.mediumSelection.addItems(["SS316", "Al6061", "Al7075"])
+            self.mediumSelection.addItems(["SS316", "Al6061", "Al7075T6"])
             self.mediumSelection.setCurrentIndex(-1)
 
         elif self.mediumTypeSelection.currentText() == "FLUID":
-            self.mediumSelection.addItems(["HYDROGEN", "ARGON", "NITROGEN"])
+            self.mediumSelection.addItems(["HYDROGEN", "ARGON", "NITROGEN","AIR"])
             self.mediumSelection.setCurrentIndex(-1)
 
     #Change connected node selection items in 2nd connected node box
@@ -506,7 +560,6 @@ class thermalSolver(QWidget):
             self.emissivityInput.setVisible(True)
             self.absorbivityLabel.setVisible(True)
             self.absorbivityInput.setVisible(True)
-
         elif self.mediumTypeSelection.currentText() == "FLUID":
             self.pressureLabel.setVisible(True)
             self.pressureInput.setVisible(True)
@@ -514,33 +567,72 @@ class thermalSolver(QWidget):
             self.emissivityInput.setVisible(False)
             self.absorbivityLabel.setVisible(False)
             self.absorbivityInput.setVisible(False)
-   
+    def toggleIsothermal(self): 
+        if self.isothermalInput.currentText() == "True":
+            self.volumeLabel.setVisible(False)
+            self.volumeInput.setVisible(False)
+            self.heatGeneratedLabel.setVisible(False)
+            self.heatGeneratedInput.setVisible(False)
+        else:
+            self.volumeLabel.setVisible(True)
+            self.volumeInput.setVisible(True)
+            self.heatGeneratedLabel.setVisible(True)
+            self.heatGeneratedInput.setVisible(True)
+
     #Solves Problem
     def solve(self): 
         try:
+         
             for node in self.backendNodes:
                 node.connectedPaths = []
             self.canvas.ax.clear()
-            tspan = [float(self.timeInitialInput.text()), float(self.timeFinalInput.text())]
-            teval = np.linspace(tspan[0], tspan[1],1000)
+
+            timeUnit = self.timeUnits.currentText()
+            temperatureUnits = self.temperatureUnits.currentText()
+            timeInitial = float(self.timeInitialInput.text())
+            timeFinal = float(self.timeFinalInput.text())
+            if timeUnit == "min":
+                timeInitial = timeInitial*60 #Converts min to s
+                timeFinal = timeFinal*60
+            elif timeUnit == 'hr':
+                timeInitial = timeInitial*3600 #Converts hr to s
+                timeFinal = timeFinal*3600
+            timeScaleFactor = 1
+            if timeUnit == 'min':
+                timeScaleFactor = 60
+            elif timeUnit == 'hr':
+                timeScaleFactor = 3600
+            tspan = [timeInitial, timeFinal]
+            teval = np.linspace(tspan[0], tspan[1],10000)
             a = 0
-            a = t.T_vs_t(tspan, teval, self.backendPaths, self.backendNodes)
-            time = a.t
-            y =a.y
             legend = []
-            for i in range(len(y[:,0])):
-                self.canvas.ax.plot(time, y[i,:])
-                legend.append(round(a.y[i,0],1))
-            self.canvas.ax.set_xlabel("Time ")
-            self.canvas.ax.set_ylabel("Temperature")
+            if self.nodeTree.topLevelItemCount() == 1:
+                node = self.backendNodes[0]
+                a = node.T + node.Eg/(node.density*node.V*node.c)*teval
+                time = teval/timeScaleFactor
+                self.canvas.ax.plot(time, a)
+                legend.append("Node 1")
+            else: 
+                a = t.T_vs_t(tspan, teval, self.backendPaths, self.backendNodes)
+                time = a.t/timeScaleFactor
+                y =a.y 
+                for i in range(len(y[:,0])):
+                    for j in range(len(y[0,:])):
+                         y[i,j] = unit_convert(y[i,j], "K", self.temperatureUnits.currentText())
+                for i in range(len(y[:,0])):
+                    self.canvas.ax.plot(time, y[i,:])
+                    legend.append(f"Node {self.backendNodes[i].identifier}")
+            self.canvas.ax.set_xlabel("Time, " + timeUnit)
+            self.canvas.ax.set_ylabel("Temperature, " + temperatureUnits)
             self.canvas.ax.set_title("Node Temperature vs Time")
             self.canvas.ax.grid(True)
             self.canvas.ax.legend(legend)
             self.canvas.draw()
-            self.errorText.setVisible(False)
-        except:
-            self.errorText.setVisible(True)
-            self.errorText.setText("Solve Inputs are incorrect/incomplete")
+            self.outputText.setVisible(False)
+        except Exception as ex:
+            print(ex)
+            self.outputText.setVisible(True)
+            self.outputText.setText("Solve Inputs are incorrect/incomplete")
    
     #Removes selected node referencing selectedNode box
     def removeNode(self): 
@@ -578,6 +670,39 @@ class thermalSolver(QWidget):
             print(self.paths)
             print(self.backendPaths)
     
+    def updateNodeEntries(self,item):
+        itemClicked = item.text(0)
+        nodeNumber = itemClicked.split(' ')[-1]
+        self.currentNodeSelection.setValue(int(nodeNumber))
+        for i in range(self.nodeTree.topLevelItemCount()):
+            if self.backendNodes[i].identifier == int(nodeNumber):
+                node = self.backendNodes[i]
+        self.isothermalInput.setCurrentText(str(node.isothermal))
+        self.temperatureInput.setText(str(node.T))
+        self.mediumSelection.setCurrentText(node.medium)
+        self.mediumTypeSelection.setCurrentText(node.medium_type)
+        self.pressureInput.setText(str(node.Pressure))
+        self.volumeInput.setText(str(node.V))
+        self.heatGeneratedInput.setText(str(node.Eg))
+        self.emissivityInput.setText(str(node.e))
+        self.absorbivityInput.setText(str(node.a))
+        self.outputText.setText(f"{itemClicked} selected")
+    
+    def updatePathEntries(self, item): 
+        itemClicked = item.text(0)
+        pathNumber = itemClicked.split(' ')[-1]
+        self.currentPathSelection.setValue(int(pathNumber))
+        for i in range(self.pathTree.topLevelItemCount()):
+            if self.backendPaths[i].identifier == int(pathNumber):
+                path = self.backendPaths[i]
+        self.heatTransferModeInput.setCurrentText(itemClicked[4])
+        self.heatTransferAreaInput.setText(str(path.Area))
+        self.heatTransferCoefficientInput.setText(str(path.h))
+        self.dxInput.setText(str(path.dx))
+        self.connectedNodesSelection1.setCurrentText(str(path.nodeA))
+        self.connectedNodesSelection2.setCurrentText(str(path.nodeB))
+
+
     def clearAll(self):
         for widget in self.findChildren(QLineEdit):
             widget.clear()
@@ -587,11 +712,12 @@ class thermalSolver(QWidget):
         self.backendPaths =[]
         self.nodes = {}
         self.paths = {}
-        self.errorText.setVisible(False)
+        self.outputText.setVisible(False)
         self.canvas.ax.clear()
         self.currentNodeSelection.setRange(1,1)
         self.currentPathSelection.setValue(1)
-   
+
+    #region UPDATE METHODS
     def updateTemperatureUnits(self):
         self.temperatureLabel.setText(
             "NODE TEMPERATURE, " + f'{self.temperatureUnits.currentText()}'
@@ -616,6 +742,13 @@ class thermalSolver(QWidget):
         self.dxLabel.setText(
             "LENGTH OF PATH, " + f'{self.distanceUnits.currentText()}'
         )
+    def updateTimeUnits(self):
+        self.timeInitialLabel.setText(
+            "TIME INITIAL, " + f'{self.timeUnits.currentText()}'
+        )
+        self.timeFinalLabel.setText(
+            "TIME FINAL, " + f'{self.timeUnits.currentText()}'
+        )
     def toggleHeatTransferProperties(self):
         if self.heatTransferModeInput.currentText() == "CONDUCTION": 
             self.heatTransferCoefficientLabel.setVisible(False)
@@ -627,6 +760,8 @@ class thermalSolver(QWidget):
             self.heatTransferCoefficientInput.setVisible(True)
             self.dxLabel.setVisible(False)
             self.dxInput.setVisible(False)
+    #endregion UPDATE METHODS
+
 if __name__ == '__main__': 
     app = QApplication([])
     thermalSolve = MainWindow()

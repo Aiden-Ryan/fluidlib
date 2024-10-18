@@ -12,6 +12,7 @@ import conversion_library as c
 material_mapping = {
     "SS316": "p.SS316",
     "Al6061": "p.Al6061",
+    "Al7075T6" : "p.Al7075T6"
 }
 
 class Node:
@@ -23,7 +24,7 @@ class Node:
         T, 
         medium, 
         medium_type, 
-        V= 0.01, 
+        V = 0.0, 
         Eg = 0.0, 
         Pressure = 0.0,
         isothermal = False,
@@ -39,6 +40,7 @@ class Node:
         
         '''
         self.medium = medium
+        self.medium_type = medium_type
         if medium_type == "FLUID":
             self.density = c.getfluidproperty(
                 self.medium,
@@ -70,14 +72,18 @@ class Node:
             self.k= p.getMatProp(self.material, "k") #W/m-K
             self.c = p.getMatProp(self.material, "specificHeatCapacity") #J/kgK
         self.isothermal = isothermal #isothermal condition is true if isothermal == 1 
-        self.V = V #m3
+        if isothermal == False and V == 0.0:
+            raise Exception("non-Isothermal node must have a volume")
+        else:
+            self.V = V #m3
+        self.Pressure = Pressure
         self.T = T #K 
         self.Eg = Eg #W, heat generated
         self.e = e
         self.a = a
         self.identifier = identifier
         if self.e == 0.0 and medium_type == "SOLID":
-            self.e = p.getMatProp(self.material, "e_20C") #emissivity
+            self.e = 0 #emissivity
         if isothermal == True:
             self.a = e # Kirchoff's Law
         if connectedPaths is None:
@@ -109,6 +115,7 @@ class Path:
 
         self.identifier = identifier
 
+    
 def T_vs_t(t, t_eval, path, nodes):
     """
     t: timespan, list [t_start, t_end]
@@ -125,6 +132,7 @@ def T_vs_t(t, t_eval, path, nodes):
             for j in range(len(path)):  
                 if path[j].nodeA == nodes[i] or path[j].nodeB == nodes[i]: #if either of path j's nodes are equal to current node, append path to connected attribute path
                     nodes[i].connectedPaths.append(j)
+    
     def func(t,T):
         dTdt = np.zeros(n, dtype=float)
         if n == 2: #Only two nodes
@@ -146,15 +154,17 @@ def T_vs_t(t, t_eval, path, nodes):
             Eg1 = a.nodeB.Eg
 
             sig = 5.678e-8
-            if T[0] > T[1]: #T0 is emmitting
-                dTdt[0] = (Eg0  - k * Area*(T[0] - T[1]) / dx - h * Area *(T[0] - T[[1]]) - (sig * Area * (e0)*(T[0]**4 - T[1]**4)))/(a.nodeA.density*a.nodeA.V*a.nodeA.c)if nodes[0].isothermal == False else 0
-            elif T[0] < T[1]: #T0 is absorbing
-                dTdt[0] = (Eg0 - k * Area*(T[0] - T[1]) / dx - h * Area *(T[0] - T[[1]]) - (sig * Area * (a0)*(T[0]**4 - T[1]**4)))/(a.nodeA.density*a.nodeA.V*a.nodeA.c)if nodes[0].isothermal == False else 0
-            if T[1] > T[0]: #T1 is emitting
-                dTdt[1] =  (Eg1 - k * Area*(T[1] - T[0]) / dx - h * Area *(T[1] - T[0]) - (sig * Area * (e1)*(T[1]**4 - T[0]**4)))/(a.nodeB.density*a.nodeB.V*a.nodeB.c)if nodes[1].isothermal == False else 0
-            elif T[1] < T[0]: #T1 is absorbing
-                dTdt[1] =  (Eg1 - k * Area*(T[1] - T[0]) / dx - h * Area *(T[1] - T[0]) - (sig * Area * (a1)*(T[1]**4 - T[0]**4)))/(a.nodeB.density*a.nodeB.V*a.nodeB.c)if nodes[1].isothermal == False else 0
-
+            dT = (T[0] - T[1]) 
+            dT4= (T[0]**4 -T[1]**4)
+            if T[0] >= T[1]: #T0 is emmitting
+                dTdt[0] = (Eg0  - k * Area*dT / dx - h * Area *dT  - (sig * Area * e0*dT4))/(a.nodeA.density*a.nodeA.V*a.nodeA.c)if nodes[0].isothermal == False else 0
+            elif T[0] <= T[1]: #T0 is absorbing
+                dTdt[0] = (Eg0 - k * Area*dT  / dx - h * Area *dT  - (sig * Area * a0*
+                dT4))/(a.nodeA.density*a.nodeA.V*a.nodeA.c)if nodes[0].isothermal == False else 0
+            if T[1] >= T[0]: #T1 is emitting
+                dTdt[1] =  (Eg1 - k * Area*dT *(-1) / dx - h * Area *-dT - (sig * Area * e1*dT4*-1))/(a.nodeB.density*a.nodeB.V*a.nodeB.c)if nodes[1].isothermal == False else 0
+            elif T[1] <= T[0]: #T1 is absorbing
+                dTdt[1] =  (Eg1 - k * Area*-dT / dx - h * Area *-dT - (sig * Area * a1*dT4*-1))/(a.nodeB.density*a.nodeB.V*a.nodeB.c)if nodes[1].isothermal == False else 0
             return dTdt
         else:
             for i in range(n):
@@ -177,6 +187,7 @@ def T_vs_t(t, t_eval, path, nodes):
                     sig = 5.678e-8 
                     Eg_A = path[P[j]].nodeA.Eg
                     Eg_B = path[P[j]].nodeB.Eg
+                    
                     #get temperature associated with path[p[j]] order must be maintained. 
                     T1 = T[nodes.index(path[P[j]].nodeA)]
                     T2 = T[nodes.index(path[P[j]].nodeB)]
@@ -184,29 +195,29 @@ def T_vs_t(t, t_eval, path, nodes):
                     if nodes.index(path[P[j]].nodeA) == i: #If T being accessed is from iteration node; use this equation
                         if T1 > T2:
                             dTdt[i] = (
-                                dTdt[i] - (Eg_A+ k*Area*(T1-T2) / dx + h * Area * (T1 - T2) 
+                                dTdt[i] - (-Eg_A+k*Area*(T1-T2) / dx + h * Area * (T1 - T2) 
                                 + (e_A)*sig*Area*(T1**4 - T2**4))/(path[P[j]].nodeA.density 
                                 * path[P[j]].nodeA.V * path[P[j]].nodeA.c) if nodes[i].isothermal == False else 0
                             )
                         elif T1 < T2: 
                             dTdt[i] = (
-                                dTdt[i] - (Eg_A+ k*Area*(T1-T2) / dx + h * Area * (T1 - T2) 
+                                dTdt[i] - (-Eg_A+ k*Area*(T1-T2) / dx + h * Area * (T1 - T2) 
                                 + (a_A)*sig*Area*(T1**4 - T2**4))/(path[P[j]].nodeA.density 
                                 * path[P[j]].nodeA.V * path[P[j]].nodeA.c) if nodes[i].isothermal == False else 0
                             )
                     elif nodes.index(path[P[j]].nodeA) != i: #If T being accessed is not from iteration node; use this equation
                         if T1 > T2:    
                             dTdt[i] =  (
-                                dTdt[i] + (Eg_B+ k*Area*(T1-T2) / dx + h * Area * (T1 - T2)
+                                dTdt[i] - (-Eg_B+k*Area*(T2-T1) / dx + h * Area * (T2 - T1)
                                 + (a_B)*sig*Area*(T2**4 - T1**4))/(path[P[j]].nodeB.density 
                                 * path[P[j]].nodeB.V * path[P[j]].nodeB.c) if nodes[i].isothermal == False else 0
                             )
                         elif T1 < T2: 
                             dTdt[i] =  (
-                                dTdt[i] + (Eg_B+k*Area*(T1-T2) / dx + h * Area * (T1 - T2)
+                                dTdt[i] - (-Eg_B+k*Area*(T2-T1) / dx + h * Area * (T2 - T1)
                                 + (e_B)*sig*Area*(T2**4 - T1**4))/(path[P[j]].nodeB.density 
                                 * path[P[j]].nodeB.V * path[P[j]].nodeB.c) if nodes[i].isothermal == False else 0
                             )
             return dTdt 
     
-    return solve_ivp(func, t_span=t, t_eval=t_eval, y0=T,method='LSODA',atol=1e-7)
+    return solve_ivp(func, t_span=t, t_eval=t_eval, y0=T,method='LSODA', atol= 1e-7)
