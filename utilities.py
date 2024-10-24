@@ -448,7 +448,7 @@ def kgps2scfm(value, fluid):
 def scfm2kgps(value, fluid):
     return scf2kg(value, fluid) / 60
 
-#density
+#region density
 
 def kgpcm2gpccm(value, *args):
     return value * 1e-3
@@ -489,7 +489,7 @@ to_kgpcm = {
     "lbm/gal": lbpgal2kgpcm,
     "lbm/in^3": lbpcin2kgpcm
 }
-
+#endregion density
 #pressure
 
 def psia2Pa(psia, *args):
@@ -649,10 +649,10 @@ def unit_convert(value1, unit1, unit2, fluid="AIR", Cd=1.0):
         value2 = from_CdA[unit2](CdA, Cd)
     elif unit1 in density_units and unit2 in density_units:
         kgpcm = to_kgpcm[unit1](value1)
-        value2 = from_kgpcm[unit2](value1)
+        value2 = from_kgpcm[unit2](kgpcm)
     elif unit1 in energy_units and unit2 in energy_units: 
         W = to_W[unit1](value1)
-        value2 = from_W[unit2](value1)
+        value2 = from_W[unit2](W)
     else: 
         print("Not a valid combination")
         value2 = 1

@@ -25,13 +25,11 @@ import numpy as np
 
 
 class MplCanvas(FigureCanvas):
-
+    
     def __init__(self, parent=None, width=5, height=4, dpi=100):
             fig, self.ax = plt.subplots(figsize=(width, height), dpi=dpi)
             super(MplCanvas, self).__init__(fig) # Set the parent widget to make it behave like a QWidget
 
-            # This ensures that the canvas expands to fit the widget dimensions
-            # self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         
 class MainWindow(QMainWindow): 
 
@@ -40,9 +38,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.title = 'Thermal Solver'
         self.setWindowTitle(self.title)
-        self.setGeometry(100,25,1200,800)
-
-        
+        self.setGeometry(100,25,900,400)
+   
         self.table_widget = thermalSolver()
         self.setCentralWidget(self.table_widget)
 
@@ -56,7 +53,7 @@ class thermalSolver(QWidget):
         self.paths = {}
         self.backendNodes = []
         self.backendPaths = []
-        
+        '''Layout definitions to be arranged in self.outerlayout'''    
         self.outerLayout = QGridLayout() #base layout
         self.nodeLayout = QVBoxLayout()
         self.attributeLayout = QVBoxLayout()
@@ -203,7 +200,7 @@ class thermalSolver(QWidget):
         #region NODE TREE
         self.nodeTree = QTreeWidget()
         self.nodeTree.setColumnCount(3)
-        self.nodeTree.setColumnWidth(0, 150)
+        self.nodeTree.setColumnWidth(0, 200)
         self.nodeTree.setHeaderLabels(["ATTRIBUTES", "VALUES", "UNITS"])
         self.nodeLayout.addWidget(self.nodeTreeTitle,alignment=Qt.AlignmentFlag.AlignHCenter)
         self.nodeLayout.addWidget(self.nodeTree)
@@ -213,8 +210,8 @@ class thermalSolver(QWidget):
         #region PATH TREE
         self.pathTree = QTreeWidget()
         self.pathTree.setColumnCount(3)
-        self.pathTree.setColumnWidth(0,150) 
-        self.pathTree.setHeaderLabels(["ATRRIBUTES", "VALUES", "UNITS"])
+        self.pathTree.setColumnWidth(0,200) 
+        self.pathTree.setHeaderLabels(["ATTRIBUTES", "VALUES", "UNITS"])
         self.pathLayout.addWidget(self.pathTreeTitle,alignment=Qt.AlignmentFlag.AlignHCenter)
         self.pathLayout.addWidget(self.pathTree)
         self.pathTree.itemClicked.connect(self.updatePathEntries)
@@ -359,12 +356,16 @@ class thermalSolver(QWidget):
 
     #Set Node Selection based on foregoing Node Selection for path
     def setNodeSelection(self): 
+        '''Clear Selected Nodes'''
         self.connectedNodesSelection1.clear()
+
         top_level_count = self.nodeTree.topLevelItemCount()
         self.connectedNodesSelection1.addItem(self.nodeTree.topLevelItem(0).text(0)) if self.nodeTree.topLevelItemCount() != 0 else ''
+        
         for i in range(top_level_count): 
             node_name = self.nodeTree.topLevelItem(i).text(0)
-            if self.connectedNodesSelection1.itemText(i) == node_name or self.nodeTree.topLevelItemCount() == 0:
+            '''If the current iteration item is equal to a pre-existing node selection'''
+            if self.connectedNodesSelection1.itemText(i) == node_name or top_level_count == 0:
                 pass
             else:
                 self.connectedNodesSelection1.addItem(node_name)
@@ -384,6 +385,7 @@ class thermalSolver(QWidget):
                 "ABSORPTIVITY,"+(self.absorbivityInput.text()) +':'if self.mediumTypeSelection.currentText() == "SOLID" else '',
                 "ISOTHERMAL," + (self.isothermalInput.currentText()) + ':'
             ]
+
             '''Stores node in backend nodes and updates nodes using identifier attribute'''
             self.backendNodes = [node for node in self.backendNodes if node.identifier != self.currentNodeSelection.value()]
             self.backendNodes.append(t.Node(
@@ -453,9 +455,9 @@ class thermalSolver(QWidget):
             self.currentNodeSelection.setValue(self.currentNodeSelection.value() + 1)
             self.nodeTree.insertTopLevelItems(0, items)
            
-        except:
+        except Exception:# as e:
             self.outputText.setVisible(True)
-            self.outputText.setText("Something went wrong with node update. Check node inputs.")
+            self.outputText.setText("Something went wrong with node update. Check node inputs." )#+ str(e))
 
     def updatePath(self): 
         try:
@@ -468,9 +470,10 @@ class thermalSolver(QWidget):
                 nume2 = int(self.paths[self.pathTree.topLevelItem(i).text(0)][0].split(' ')[-1])
                 denom2 = int(self.paths[self.pathTree.topLevelItem(i).text(0)][1].split(' ')[-1])   
                 prod = (nume1/denom1)*(nume2/denom2) 
-                if prod == (nume2/denom2)**2 or prod == 1 and self.pathTree.topLevelItem(i).text(0).split(' ')[-1] != self.currentPathSelection.text(): 
+                if (self.pathTree.topLevelItem(i).text(0).split(' ')[-1] != self.currentPathSelection.text()) and (prod == (nume2/denom2)**2 or prod == 1):  
                     print("Path already exists")
                     return 1
+                
             self.pathTree.clear()
             attributes =[ 
                 "Node A," + self.connectedNodesSelection1.currentText(),
@@ -478,7 +481,7 @@ class thermalSolver(QWidget):
                 "h," + self.heatTransferCoefficientInput.text() if self.heatTransferModeInput.currentText() == "CONVECTION" else '',
                 "Area," + self.heatTransferAreaInput.text(),
                 "dx," + self.dxInput.text() if self.heatTransferModeInput.currentText() == "CONDUCTION" else '',
-                f"{self.heatTransferModeInput}"
+                f"{self.heatTransferModeInput.currentText()}"
             ]
             self.backendPaths = [path for path in self.backendPaths if path.identifier != self.currentPathSelection.value()]
             
@@ -523,13 +526,14 @@ class thermalSolver(QWidget):
                             child = QTreeWidgetItem([label,val])
                             pathAssignment.addChild(child)
                     items.append(pathAssignment)
+            self.outputText.setVisible(True)
+            self.outputText.setText(f"Path {self.currentPathSelection.text()} has been updated.")
             self.currentPathSelection.setValue(self.currentPathSelection.value() + 1)
             self.pathTree.insertTopLevelItems(0, items)
             print(self.paths)
             print(self.backendPaths)
         except Exception as e: 
-            print(e)
-            self.outputText.setText("Something went wrong with path inputs")   
+            self.outputText.setText("Something went wrong with path inputs." +str(e))   
 
     #Sets Selection Medium based on medium type selection
     def changeMediumSelectionItems(self): 
@@ -610,7 +614,7 @@ class thermalSolver(QWidget):
                 node = self.backendNodes[0]
                 a = node.T + node.Eg/(node.density*node.V*node.c)*teval
                 time = teval/timeScaleFactor
-                self.canvas.ax.plot(time, a)
+                self.canvas.ax.plot(time, unit_convert(a, "K", self.temperatureUnits.currentText()))
                 legend.append("Node 1")
             else: 
                 a = t.T_vs_t(tspan, teval, self.backendPaths, self.backendNodes)
@@ -635,7 +639,8 @@ class thermalSolver(QWidget):
             self.outputText.setText("Solve Inputs are incorrect/incomplete")
    
     #Removes selected node referencing selectedNode box
-    def removeNode(self): 
+    def removeNode(self):
+        try: 
             for i in range(self.nodeTree.topLevelItemCount()):
                 if self.currentNodeSelection.text() == self.nodeTree.topLevelItem(i).text(0).split(" ")[-1]:
                     
@@ -654,21 +659,32 @@ class thermalSolver(QWidget):
                     print(self.nodes)
                     print(self.backendNodes)
                     break
-            else: 
-                print("Node does not exist")
+                else: 
+                    print("Node does not exist")
+        except Exception as e:
+            self.outputText.setText(str(e))
         
     def removePath(self): 
-            a = self.pathTree.topLevelItem(int(self.currentPathSelection.text()) - 1).text(0).split(' ')[-1]
-            if self.currentPathSelection.text() == a: 
-                item = self.pathTree.takeTopLevelItem(int(self.currentPathSelection.text()) - 1); del item; 
-                self.paths.pop('Path ' + self.currentPathSelection.text())
-                self.backendPaths.pop(int(self.currentPathSelection.text())-1)
-                self.currentPathSelection.setMaximum(self.currentPathSelection.maximum() - 1)
-                self.currentPathSelection.setValue(self.currentPathSelection.value() -1)
-            else:
-                print("Path does not exist")
-            print(self.paths)
-            print(self.backendPaths)
+        try:
+            for i in range(self.pathTree.topLevelItemCount()):
+                a = self.pathTree.topLevelItem(i).text(0).split(' ')[-1]
+                if self.currentPathSelection.text() == a:
+                    for j in range(len(self.backendPaths)):
+                        if self.backendPaths[j].identifier == int(self.currentPathSelection.text()):
+                            self.backendPaths.remove(self.backendPaths[j])
+                            break
+                        
+                    item = self.pathTree.takeTopLevelItem(i); del item; 
+                    self.paths.pop('Path ' + self.currentPathSelection.text())
+                    self.currentPathSelection.setMaximum(self.currentPathSelection.maximum() - 1)
+                    self.currentPathSelection.setValue(self.currentPathSelection.value() -1)
+                    break
+                else:
+                     print("Path does not exist")
+        
+        except Exception as e:
+            self.outputText.setText(str(e))
+
     
     def updateNodeEntries(self,item):
         itemClicked = item.text(0)
